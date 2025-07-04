@@ -1,0 +1,52 @@
+
+:root {
+    --background-color: #ffffff;
+    --text-color: #222222;
+    --secondary-text-color: #555555;
+    --accent-color: #007aff;
+    --border-color: #e0e0e0;
+    --body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --content-width: 700px;
+    --base-font-size: 17px;
+    --base-line-height: 1.6;
+}
+html[data-theme='midnight'] { --background-color: #1a1a1a; --text-color: #e5e5e5; --secondary-text-color: #999999; --accent-color: #4da6ff; --border-color: #333333; }
+html[data-theme='sepia'] { --background-color: #f4f0e8; --text-color: #4a4033; --secondary-text-color: #7a6a58; --accent-color: #b35900; --border-color: #dcd3c3; }
+html[data-theme='slate'] { --background-color: #2e3440; --text-color: #eceff4; --secondary-text-color: #d8dee9; --accent-color: #88c0d0; --border-color: #4c566a; }
+html[data-theme='latte'] { --background-color: #fdf6e3; --text-color: #657b83; --secondary-text-color: #93a1a1; --accent-color: #cb4b16; --border-color: #eee8d5; }
+html[data-theme='monochrome'] { --background-color: #ffffff; --text-color: #000000; --secondary-text-color: #555555; --accent-color: #000000; --border-color: #bbbbbb; }
+html[data-font='serif'] { --body-font: Iowan Old Style, Georgia, Times, "Times New Roman", serif; }
+html[data-font='mono'] { --body-font: "SF Mono", Menlo, Consolas, "Courier New", monospace; }
+body { font-family: var(--body-font); background-color: var(--background-color); color: var(--text-color); margin: 0; padding: 2rem 1rem; font-size: var(--base-font-size); line-height: var(--base-line-height); transition: background-color 0.3s, color 0.3s; }
+.site-header { max-width: var(--content-width); margin: 0 auto; padding-bottom: 2rem; border-bottom: 1px solid var(--border-color); margin-bottom: 2rem; position: relative; }
+#feed-container { max-width: var(--content-width); margin: 0 auto; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem 0; }
+.site-header p { font-size: 1.2rem; color: var(--secondary-text-color); margin-top: 0; margin-bottom: 1rem; }
+.site-nav { display: flex; justify-content: flex-start; align-items: center; }
+.nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 0; color: var(--text-color); z-index: 1001; }
+.nav-links { list-style: none; margin: 0; padding: 0; display: flex; gap: 1.5rem; }
+.nav-links a { text-decoration: none; color: var(--secondary-text-color); font-weight: 500; font-size: 0.95rem; }
+.nav-links a:hover { color: var(--accent-color); }
+@media (max-width: 768px) {
+    .site-nav { justify-content: flex-end; }
+    .nav-toggle { display: block; position: absolute; top: calc(2rem - 8px); right: 1rem; }
+    .nav-links { display: none; position: absolute; top: 60px; right: 0; flex-direction: column; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); gap: 1rem; z-index: 1000; min-width: 180px; }
+    .nav-links.active { display: flex; }
+}
+.feed-item { padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); }
+.feed-item:last-child { border-bottom: none; margin-bottom: 0; }
+.item-meta { font-size: 0.9rem; color: var(--secondary-text-color); font-weight: 500; margin-bottom: 0.25rem; display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; }
+.item-meta .separator { color: var(--border-color); }
+.item-title { font-size: 1.5rem; margin: 0 0 0.5rem 0; font-weight: 600; }
+.item-title a { color: var(--text-color); text-decoration: none; }
+.item-title a:hover { color: var(--accent-color); text-decoration: underline; }
+.item-summary { margin: 0.5rem 0 1rem 0; }
+.item-actions { display: flex; gap: 0.75rem; margin: 1rem 0; }
+.action-button { background-color: transparent; border: 1px solid var(--border-color); color: var(--secondary-text-color); padding: 0.4rem 0.8rem; font-size: 0.85rem; font-weight: 500; border-radius: 20px; text-decoration: none; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+.action-button:hover { background-color: var(--border-color); color: var(--text-color); }
+.item-audio { width: 100%; margin-top: 1rem; }
+a { color: var(--accent-color); }
+.error-message { color: var(--secondary-text-color); }
+.loading-message { display: flex; align-items: center; justify-content: center; gap: 0.75rem; font-size: 1.1rem; color: var(--secondary-text-color); padding: 2rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 20px; height: 20px; border: 3px solid var(--border-color); border-top-color: var(--secondary-text-color); border-radius: 50%; animation: spin 1s linear infinite; }
