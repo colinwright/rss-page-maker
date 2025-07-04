@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSS Page Maker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; height: 100vh; margin: 0; background-color: #f8f9fa; color: #212529; }
+        .controls { width: 450px; padding: 20px; overflow-y: auto; background-color: #fff; border-right: 1px solid #dee2e6; }
+        .preview { flex-grow: 1; }
+        iframe { width: 100%; height: 100%; border: none; }
+        h2 { margin-top: 0; }
+        h3 { margin-top: 2rem; border-bottom: 1px solid #e9ecef; padding-bottom: 0.5rem; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; font-weight: 500; margin-bottom: 0.25rem; }
+        input[type="text"], select { width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; }
+        .dynamic-item { display: flex; gap: 10px; align-items: center; margin-bottom: 0.5rem; border: 1px solid #e9ecef; padding: 10px; border-radius: 4px; }
+        .dynamic-item div { flex-grow: 1; }
+        .remove-btn { flex-shrink: 0; background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold; line-height: 24px; text-align: center; }
+        .add-btn { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+        .generate-container { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e9ecef; }
+        #generate-button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem; width: 100%; }
+        #generate-button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        #download-container { margin-top: 1rem; }
+        #download-container a { display: block; margin-bottom: 0.5rem; }
+        .info { font-size: 0.9rem; color: #6c757d; margin-top: 0.25rem; }
+    </style>
+</head>
+<body>
+
+    <div class="controls" id="controls-panel">
+        <h2>RSS Page Maker</h2>
+        <p class="info">Customize your site below (the preview on the right updates instantly).</p>
+        <p class="info">When done, click `Generate Website,` download and upzip the file, and upload the files in the `upload_these_files` folder to your web host.</p>
+
+        <h3>Header</h3>
+        <div class="form-group"><label for="site-title">Page Title (Browser Tab)</label><input type="text" id="site-title" value="My Work"></div>
+        <div class="form-group"><label for="header-title">Header Title</label><input type="text" id="header-title" value="My Work"></div>
+        <div class="form-group"><label for="header-subtitle">Subtitle</label><input type="text" id="header-subtitle" value="A collection of my recent articles and podcast episodes."></div>
+
+        <h3>Appearance</h3>
+        <div class="form-group"><label for="color-scheme">Color Scheme</label><select id="color-scheme"><option value="system">System (Default)</option><option value="midnight">Midnight</option><option value="sepia">Sepia</option><option value="slate">Slate</option><option value="latte">Latte</option><option value="monochrome">Monochrome</option></select></div>
+        <div class="form-group"><label for="font-scheme">Font Scheme</label><select id="font-scheme"><option value="system">System (Default)</option><option value="serif">Serif</option><option value="mono">Mono</option></select></div>
+
+        <h3>Navigation Links</h3>
+        <div id="nav-link-container"></div>
+        <button id="add-nav-link" class="add-btn">Add Link</button>
+
+        <h3>RSS Feeds</h3>
+        <div id="rss-feed-container"></div>
+        <button id="add-rss-feed" class="add-btn">Add RSS Feed</button>
+
+        <div class="generate-container">
+            <button id="generate-button">Generate Website</button>
+            <div id="download-container"></div>
+        </div>
+    </div>
+
+    <div class="preview"><iframe id="preview-frame"></iframe></div>
+
+    <script>
+        const templateStyleCss = `
+:root {
+    --background-color: #ffffff;
+    --text-color: #222222;
+    --secondary-text-color: #555555;
+    --accent-color: #007aff;
+    --border-color: #e0e0e0;
+    --body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --content-width: 700px;
+    --base-font-size: 17px;
+    --base-line-height: 1.6;
+}
+html[data-theme='midnight'] { --background-color: #1a1a1a; --text-color: #e5e5e5; --secondary-text-color: #999999; --accent-color: #4da6ff; --border-color: #333333; }
+html[data-theme='sepia'] { --background-color: #f4f0e8; --text-color: #4a4033; --secondary-text-color: #7a6a58; --accent-color: #b35900; --border-color: #dcd3c3; }
+html[data-theme='slate'] { --background-color: #2e3440; --text-color: #eceff4; --secondary-text-color: #d8dee9; --accent-color: #88c0d0; --border-color: #4c566a; }
+html[data-theme='latte'] { --background-color: #fdf6e3; --text-color: #657b83; --secondary-text-color: #93a1a1; --accent-color: #cb4b16; --border-color: #eee8d5; }
+html[data-theme='monochrome'] { --background-color: #ffffff; --text-color: #000000; --secondary-text-color: #555555; --accent-color: #000000; --border-color: #bbbbbb; }
+html[data-font='serif'] { --body-font: Iowan Old Style, Georgia, Times, "Times New Roman", serif; }
+html[data-font='mono'] { --body-font: "SF Mono", Menlo, Consolas, "Courier New", monospace; }
+body { font-family: var(--body-font); background-color: var(--background-color); color: var(--text-color); margin: 0; padding: 2rem 1rem; font-size: var(--base-font-size); line-height: var(--base-line-height); transition: background-color 0.3s, color 0.3s; }
+.site-header { max-width: var(--content-width); margin: 0 auto; padding-bottom: 2rem; border-bottom: 1px solid var(--border-color); margin-bottom: 2rem; position: relative; }
+#feed-container { max-width: var(--content-width); margin: 0 auto; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem 0; }
+.site-header p { font-size: 1.2rem; color: var(--secondary-text-color); margin-top: 0; margin-bottom: 1rem; }
+.site-nav { display: flex; justify-content: flex-start; align-items: center; }
+.nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 0; color: var(--text-color); z-index: 1001; }
+.nav-links { list-style: none; margin: 0; padding: 0; display: flex; gap: 1.5rem; }
+.nav-links a { text-decoration: none; color: var(--secondary-text-color); font-weight: 500; font-size: 0.95rem; }
+.nav-links a:hover { color: var(--accent-color); }
+@media (max-width: 768px) {
+    .site-nav { justify-content: flex-end; }
+    .nav-toggle { display: block; position: absolute; top: calc(2rem - 8px); right: 1rem; }
+    .nav-links { display: none; position: absolute; top: 60px; right: 0; flex-direction: column; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); gap: 1rem; z-index: 1000; min-width: 180px; }
+    .nav-links.active { display: flex; }
+}
+.feed-item { padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); }
+.feed-item:last-child { border-bottom: none; margin-bottom: 0; }
+.item-meta { font-size: 0.9rem; color: var(--secondary-text-color); font-weight: 500; margin-bottom: 0.25rem; display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; }
+.item-meta .separator { color: var(--border-color); }
+.item-title { font-size: 1.5rem; margin: 0 0 0.5rem 0; font-weight: 600; }
+.item-title a { color: var(--text-color); text-decoration: none; }
+.item-title a:hover { color: var(--accent-color); text-decoration: underline; }
+.item-summary { margin: 0.5rem 0 1rem 0; }
+.item-actions { display: flex; gap: 0.75rem; margin: 1rem 0; }
+.action-button { background-color: transparent; border: 1px solid var(--border-color); color: var(--secondary-text-color); padding: 0.4rem 0.8rem; font-size: 0.85rem; font-weight: 500; border-radius: 20px; text-decoration: none; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+.action-button:hover { background-color: var(--border-color); color: var(--text-color); }
+.item-audio { width: 100%; margin-top: 1rem; }
+a { color: var(--accent-color); }
+.error-message { color: var(--secondary-text-color); }
+.loading-message { display: flex; align-items: center; justify-content: center; gap: 0.75rem; font-size: 1.1rem; color: var(--secondary-text-color); padding: 2rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 20px; height: 20px; border: 3px solid var(--border-color); border-top-color: var(--secondary-text-color); border-radius: 50%; animation: spin 1s linear infinite; }`;
+
+        const templateScriptJs = `
+const feedContainer = document.getElementById('feed-container');
+const apiEndpoint = 'https://api.rss2json.com/v1/api.json?rss_url=';
+const CACHE_KEY = 'feed_data';
+const CACHE_DURATION_MS = 60 * 60 * 1000;
+
+function getSources() {
+    return window.feedSources || (typeof feedSources !== 'undefined' ? feedSources : []);
+}
+function applyCustomizations() {
+    if (typeof colorScheme !== 'undefined' && colorScheme !== 'system') document.documentElement.setAttribute('data-theme', colorScheme);
+    if (typeof fontScheme !== 'undefined' && fontScheme !== 'system') document.documentElement.setAttribute('data-font', fontScheme);
+}
+function setupNavigation() {
+    const nav = document.querySelector('.site-nav');
+    const toggleButton = document.getElementById('nav-toggle-button');
+    const navLinks = document.getElementById('nav-links');
+    if (!nav || !navLinks) return;
+    if (navLinks.children.length === 0) { nav.style.display = 'none'; return; }
+    if (toggleButton) {
+        toggleButton.addEventListener('click', e => { e.stopPropagation(); navLinks.classList.toggle('active'); });
+        document.addEventListener('click', () => navLinks.classList.remove('active'));
+    }
+}
+function renderItems(items) {
+    if (!items || items.length === 0) {
+        if (getSources().length === 0) feedContainer.innerHTML = '<p class="error-message">No RSS feeds have been added.</p>';
+        return;
+    }
+    items.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+    feedContainer.innerHTML = '';
+    items.forEach(item => feedContainer.appendChild(createFeedItemElement(item)));
+}
+function createFeedItemElement(item) {
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'feed-item';
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'item-meta';
+    metaDiv.innerHTML = \`<span>\${item.sourceName}</span><span class="separator">•</span><span>\${new Date(item.pubDate).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}</span>\`;
+    const titleH2 = document.createElement('h2');
+    titleH2.className = 'item-title';
+    titleH2.innerHTML = \`<a href="\${item.link}" target="_blank" rel="noopener noreferrer">\${item.title}</a>\`;
+    const summaryP = document.createElement('p');
+    summaryP.className = 'item-summary';
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = item.description;
+    summaryP.textContent = tempDiv.textContent.split(' ').slice(0, 50).join(' ') + '…';
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'item-actions';
+    const readButton = document.createElement('a');
+    readButton.href = item.link;
+    readButton.target = '_blank';
+    readButton.rel = 'noopener noreferrer';
+    readButton.className = 'action-button';
+    readButton.textContent = 'Read';
+    actionsDiv.appendChild(readButton);
+    const copyButton = document.createElement('button');
+    copyButton.className = 'action-button';
+    copyButton.textContent = 'Copy Link';
+    copyButton.addEventListener('click', () => {
+        navigator.clipboard.writeText(item.link).then(() => {
+            copyButton.textContent = 'Copied!';
+            setTimeout(() => { copyButton.textContent = 'Copy Link'; }, 2000);
+        });
+    });
+    actionsDiv.appendChild(copyButton);
+    if (navigator.share) {
+        const shareButton = document.createElement('button');
+        shareButton.className = 'action-button';
+        shareButton.textContent = 'Share';
+        shareButton.addEventListener('click', async () => {
+            try { await navigator.share({ title: item.title, url: item.link }); } catch (err) { console.error('Share failed:', err); }
+        });
+        actionsDiv.appendChild(shareButton);
+    }
+    itemDiv.appendChild(metaDiv);
+    itemDiv.appendChild(titleH2);
+    itemDiv.appendChild(summaryP);
+    itemDiv.appendChild(actionsDiv);
+    if (item.enclosure?.link && item.enclosure.type.startsWith('audio/')) {
+        const audioPlayer = document.createElement('audio');
+        audioPlayer.className = 'item-audio';
+        audioPlayer.controls = true;
+        audioPlayer.src = item.enclosure.link;
+        itemDiv.appendChild(audioPlayer);
+    }
+    return itemDiv;
+}
+window.fetchFreshData = async function() {
+    try {
+        const sources = getSources();
+        if (sources.length === 0) { renderItems([]); return; }
+        const fetchPromises = sources.map(source =>
+            fetch(apiEndpoint + encodeURIComponent(source.url))
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status !== 'ok') { console.error('rss2json error for ' + source.name + ':', data.message); return []; }
+                    return (data.items || []).map(item => ({ ...item, sourceName: source.name }));
+                })
+        );
+        const allFeeds = await Promise.all(fetchPromises);
+        const allItems = allFeeds.flat();
+        if (allItems.length > 0) {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), items: allItems }));
+            renderItems(allItems);
+        } else if (!getCachedData()) {
+            throw new Error("No content could be loaded. Check feed URLs.");
+        }
+    } catch (error) {
+        console.error('Failed to render feeds:', error);
+        if (!getCachedData()) { feedContainer.innerHTML = '<p class="error-message">Could not load content. ' + error.message + '</p>'; }
+    }
+}
+function getCachedData() {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+    const { timestamp, items } = JSON.parse(cached);
+    if (Date.now() - timestamp > CACHE_DURATION_MS) { localStorage.removeItem(CACHE_KEY); return null; }
+    return items;
+}
+function main() {
+    applyCustomizations();
+    setupNavigation();
+    const cachedItems = getCachedData();
+    if (cachedItems) renderItems(cachedItems);
+    fetchFreshData();
+}
+main();`;
+
+        const controlsPanel = document.getElementById('controls-panel');
+        const navLinkContainer = document.getElementById('nav-link-container');
+        const rssFeedContainer = document.getElementById('rss-feed-container');
+        const previewFrame = document.getElementById('preview-frame');
+        let debounceTimer;
+
+        const escapeHTML = str => {
+            const p = document.createElement("p");
+            p.textContent = str;
+            return p.innerHTML;
+        }
+
+        const createNavItem = (text = '', url = '') => {
+            const div = document.createElement('div');
+            div.className = 'dynamic-item';
+            div.innerHTML = `<div><label>Link Text</label><input type="text" class="nav-text" value="${escapeHTML(text)}"></div><div><label>Link URL</label><input type="text" class="nav-url" value="${escapeHTML(url)}" placeholder="https://example.com"></div><button class="remove-btn" title="Remove Link">×</button>`;
+            navLinkContainer.appendChild(div);
+        }
+
+        const createRssItem = (name = '', url = '') => {
+            const div = document.createElement('div');
+            div.className = 'dynamic-item';
+            div.innerHTML = `<div><label>Feed Name</label><input type="text" class="rss-name" value="${escapeHTML(name)}"></div><div><label>Feed URL</label><input type="text" class="rss-url" value="${escapeHTML(url)}" placeholder="https://example.com/feed.xml"></div><button class="remove-btn" title="Remove Feed">×</button>`;
+            rssFeedContainer.appendChild(div);
+        }
+
+        const getNavLinksData = () => Array.from(document.querySelectorAll('#nav-link-container .dynamic-item')).map(item => {
+            const text = item.querySelector('.nav-text').value.trim();
+            const url = item.querySelector('.nav-url').value.trim();
+            return { text, url };
+        }).filter(link => link.text && link.url);
+
+        const getFeedSources = () => Array.from(document.querySelectorAll('#rss-feed-container .dynamic-item')).map(item => {
+            const name = item.querySelector('.rss-name').value.trim();
+            const url = item.querySelector('.rss-url').value.trim();
+            return { name, url };
+        }).filter(feed => feed.name && feed.url);
+
+        const updatePreview = (updateType = 'all') => {
+            const previewDoc = previewFrame.contentDocument;
+            const previewWindow = previewFrame.contentWindow;
+            if (!previewDoc || !previewWindow) return;
+
+            if (updateType === 'style' || updateType === 'all') {
+                previewDoc.title = document.getElementById('site-title').value;
+                previewDoc.querySelector('.site-header h1').textContent = document.getElementById('header-title').value;
+                previewDoc.querySelector('.site-header p').textContent = document.getElementById('header-subtitle').value;
+                previewDoc.documentElement.setAttribute('data-theme', document.getElementById('color-scheme').value);
+                previewDoc.documentElement.setAttribute('data-font', document.getElementById('font-scheme').value);
+                
+                const navLinksHTML = getNavLinksData().map(link => {
+                    const target = link.url.startsWith('http') ? 'target="_blank"' : '';
+                    return `<li><a href="${escapeHTML(link.url)}" ${target}>${escapeHTML(link.text)}</a></li>`;
+                }).join('\n');
+                
+                const navLinksEl = previewDoc.getElementById('nav-links');
+                const navEl = previewDoc.querySelector('.site-nav');
+                if (navLinksEl) navLinksEl.innerHTML = navLinksHTML;
+                if (navEl) navEl.style.display = navLinksHTML.trim() ? '' : 'none';
+            }
+            
+            if (updateType === 'data' || updateType === 'all') {
+                if (typeof previewWindow.fetchFreshData === 'function') {
+                    localStorage.removeItem('feed_data');
+                    previewWindow.feedSources = getFeedSources();
+                    previewDoc.getElementById('feed-container').innerHTML = '<div class="loading-message"><div class="spinner"></div>Loading preview...</div>';
+                    previewWindow.fetchFreshData();
+                }
+            }
+        }
+        
+        const handleControlChange = e => {
+            const target = e.target;
+            if (target.matches('.rss-url, .rss-name')) {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => updatePreview('data'), 500);
+            } else if (target.matches('#site-title, #header-title, #header-subtitle, #color-scheme, #font-scheme, .nav-text, .nav-url')) {
+                updatePreview('style');
+            }
+
+            if (e.type === 'change' && target.matches('.nav-url, .rss-url')) {
+                let url = target.value.trim();
+                if (url) {
+                    const isNavLink = target.classList.contains('nav-url');
+                    const protocolRegex = isNavLink ? /^(https?:\/\/|mailto:|tel:|#)/ : /^(https?:\/\/)/;
+                    if (!protocolRegex.test(url)) {
+                        target.value = 'https://' + url;
+                        updatePreview('style');
+                    }
+                }
+            }
+        }
+
+        const setupInitialState = () => {
+            document.getElementById('color-scheme').value = 'system';
+            document.getElementById('font-scheme').value = 'system';
+            navLinkContainer.innerHTML = '';
+            rssFeedContainer.innerHTML = '';
+            [{ text: 'GitHub', url: 'https://github.com' }, { text: 'Twitter', url: 'https://twitter.com' }].forEach(link => createNavItem(link.text, link.url));
+            [{ name: 'Daring Fireball', url: 'https://daringfireball.net/feeds/main' }].forEach(feed => createRssItem(feed.name, feed.url));
+        }
+
+        controlsPanel.addEventListener('click', e => {
+            if (e.target.id === 'add-nav-link') createNavItem();
+            if (e.target.id === 'add-rss-feed') createRssItem();
+            if (e.target.classList.contains('remove-btn')) {
+                const item = e.target.closest('.dynamic-item');
+                const isRssItem = !!item.querySelector('.rss-url');
+                item.remove();
+                updatePreview(isRssItem ? 'data' : 'style');
+            }
+        });
+        
+        ['input', 'change'].forEach(evt => controlsPanel.addEventListener(evt, handleControlChange));
+        
+        previewFrame.addEventListener('load', () => setTimeout(() => updatePreview('all'), 100));
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            setupInitialState();
+            const initialPreviewHtml = `<!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <title></title>
+                    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>${templateStyleCss}</style>
+                </head>
+                <body>
+                    <header class="site-header">
+                        <h1></h1><p></p>
+                        <nav class="site-nav">
+                            <button class="nav-toggle" id="nav-toggle-button" aria-label="Toggle Navigation">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 4H21V6H3V4ZM3 11H21V13H3V11ZM3 18H21V20H3V18Z"></path></svg>
+                            </button>
+                            <ul class="nav-links" id="nav-links"></ul>
+                        </nav>
+                    </header>
+                    <main id="feed-container"></main>
+                    <script>${templateScriptJs.replace(/<\/script>/g, '<\\/script>')}<\/script>
+                </body>
+                </html>`;
+            previewFrame.srcdoc = initialPreviewHtml;
+        });
+
+        document.getElementById('generate-button').addEventListener('click', async () => {
+            const button = document.getElementById('generate-button');
+            const downloadContainer = document.getElementById('download-container');
+            button.textContent = 'Generating...';
+            button.disabled = true;
+            downloadContainer.innerHTML = '';
+
+            try {
+                const navLinks = getNavLinksData().map(link => {
+                    if (!/^(https?:\/\/|mailto:|tel:|#)/.test(link.url)) link.url = 'https://' + link.url;
+                    return link;
+                });
+                const navLinksHTML = navLinks.map(link => {
+                    const target = link.url.startsWith('http') ? 'target="_blank"' : '';
+                    return `<li><a href="${escapeHTML(link.url)}" ${target}>${escapeHTML(link.text)}</a></li>`;
+                }).join('\n');
+
+                const feedSources = getFeedSources().map(source => {
+                    if (!/^(https?:\/\/)/.test(source.url)) source.url = 'https://' + source.url;
+                    return source;
+                });
+
+                const settingsContent = `// Site Settings\nconst colorScheme = ${JSON.stringify(document.getElementById('color-scheme').value)};\nconst fontScheme = ${JSON.stringify(document.getElementById('font-scheme').value)};\nconst feedSources = ${JSON.stringify(feedSources, null, 4)};\n`;
+                
+                const indexHtmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>${escapeHTML(document.getElementById('site-title').value)}</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <script src="settings.js" defer><\/script>
+    <script src="script.js" defer><\/script>
+</head>
+<body>
+    <header class="site-header">
+        <h1>${escapeHTML(document.getElementById('header-title').value)}</h1>
+        <p>${escapeHTML(document.getElementById('header-subtitle').value)}</p>
+        <nav class="site-nav" ${!navLinksHTML.trim() ? 'style="display: none;"' : ''}>
+            <button class="nav-toggle" id="nav-toggle-button" aria-label="Toggle Navigation">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 4H21V6H3V4ZM3 11H21V13H3V11ZM3 18H21V20H3V18Z"></path></svg>
+            </button>
+            <ul class="nav-links" id="nav-links">
+${navLinksHTML.trim()}
+            </ul>
+        </nav>
+    </header>
+    <main id="feed-container">
+        <div class="loading-message"><div class="spinner"></div>Loading content...</div>
+    </main>
+</body>
+</html>`;
+                
+                const zip = new JSZip();
+                const zipFolder = zip.folder("upload_these_files");
+                zipFolder.file("index.html", indexHtmlContent);
+                zipFolder.file("settings.js", settingsContent);
+                zipFolder.file("style.css", templateStyleCss);
+                zipFolder.file("script.js", templateScriptJs);
+
+                const zipBlob = await zip.generateAsync({ type: "blob" });
+                const downloadUrl = URL.createObjectURL(zipBlob);
+                
+                downloadContainer.innerHTML = `<h4>Your website is ready.</h4><a href="${downloadUrl}" download="upload_these_files.zip">Download upload_these_files.zip</a><p class="info">Unzip this file and upload the files in the \`upload_these_files\` folder to your web host.</p>`;
+            } catch (error) {
+                console.error("Failed to generate zip file:", error);
+                downloadContainer.innerHTML = `<p class="info" style="color: #dc3545;">An error occurred during generation. See console for details.</p>`;
+            } finally {
+                button.textContent = 'Generate Website';
+                button.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
