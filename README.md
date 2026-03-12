@@ -2,7 +2,7 @@
 
 1. Download the RSSPageMaker.zip file and unzip it. Inside you'll find the RSSPageMaker.html file. Double-click this file to open it in your default web browser (or drag/right-click to open in your browser of choice).
 
-2. Use the siderbar on the left to customize the live preview on the right. Add a page title, header title, and subtitle, tweak your color and font schemes, and add some links (which will appear as menu items at the top) if you like.
+2. Use the sidebar on the left to customize the live preview on the right. Add a page title, header title, and subtitle, tweak your color and font schemes, and add some links (which will appear as menu items at the top) if you like.
 
 3. Add your RSS feeds—the name is the title that will display at the top of each feed item, the URL is the RSS feed URL/address that provides the items to display. This URL is often something like 'your-domain.com/RSS' or 'your-domain.com/feed' (for Substack accounts, for instance, it's 'your-domain.substack.com/feed'). Enter the proper RSS URL and then click away so the site knows to update what's in the preview, and you'll see your most recent posts/episodes populate the preview (that's what you'll see on the resulting web page).
 
