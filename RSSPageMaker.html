@@ -6,55 +6,393 @@
     <title>RSS Page Maker</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; height: 100vh; margin: 0; background-color: #f8f9fa; color: #212529; }
-        .controls { width: 450px; padding: 20px; overflow-y: auto; background-color: #fff; border-right: 1px solid #dee2e6; }
-        .preview { flex-grow: 1; }
-        iframe { width: 100%; height: 100%; border: none; }
-        h2 { margin-top: 0; }
-        h3 { margin-top: 2rem; border-bottom: 1px solid #e9ecef; padding-bottom: 0.5rem; }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-weight: 500; margin-bottom: 0.25rem; }
-        input[type="text"], select { width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; }
-        .dynamic-item { display: flex; gap: 10px; align-items: center; margin-bottom: 0.5rem; border: 1px solid #e9ecef; padding: 10px; border-radius: 4px; }
-        .dynamic-item div { flex-grow: 1; }
-        .remove-btn { flex-shrink: 0; background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold; line-height: 24px; text-align: center; }
-        .add-btn { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
-        .generate-container { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e9ecef; }
-        #generate-button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem; width: 100%; }
-        #generate-button:disabled { background-color: #6c757d; cursor: not-allowed; }
-        #download-container { margin-top: 1rem; }
-        #download-container a { display: block; margin-bottom: 0.5rem; }
-        .info { font-size: 0.9rem; color: #6c757d; margin-top: 0.25rem; }
+        :root {
+            --bg-primary: #FFFFFC;
+            --bg-secondary: #F8F7F6;
+            --bg-tertiary: #EBEBC9;
+            --text-main: #444444;
+            --accent-color: #647F98; /* Slate Blue */
+            --accent-hover: #93A7B9;
+            --accent-success: #79915C; /* Pea Green */
+            --accent-success-hover: #9DB286;
+            --accent-danger: #C0A7A4; /* Rusty Rose */
+            --accent-danger-hover: #D8C3C1;
+            --border-color: #E2E1DF;
+            --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+            --font-serif: Georgia, "Times New Roman", serif;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            background-color: var(--bg-secondary);
+            color: var(--text-main);
+        }
+
+        .controls {
+            width: 450px;
+            padding: 24px;
+            overflow-y: auto;
+            background-color: var(--bg-primary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        .panel-header {
+            margin-bottom: 8px;
+        }
+
+        h2 {
+            font-family: var(--font-serif);
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: normal;
+        }
+
+        h3, h4 {
+            font-family: var(--font-serif);
+            margin-top: 2rem;
+            margin-bottom: 0.75rem;
+            font-weight: normal;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+        }
+
+        h4 {
+            font-size: 1.2rem;
+        }
+
+        .preview {
+            flex-grow: 1;
+            background-color: var(--bg-secondary);
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-bottom: 0.35rem;
+            color: var(--text-main);
+            opacity: 0.9;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            height: 44px;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--bg-secondary);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(100, 127, 152, 0.2);
+        }
+
+        .dynamic-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            margin-bottom: 0.75rem;
+            border: 1px solid var(--border-color);
+            padding: 14px;
+            border-radius: 6px;
+            background-color: var(--bg-secondary);
+            transition: opacity 0.2s, border-color 0.2s;
+        }
+
+        .dynamic-item div {
+            flex-grow: 1;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            padding: 0 8px 0 0;
+            color: var(--text-main);
+            opacity: 0.4;
+            font-size: 1.25rem;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 44px;
+            align-self: center;
+            box-sizing: border-box;
+        }
+
+        .drag-handle:hover {
+            opacity: 0.8;
+        }
+
+        .dynamic-item.dragging {
+            opacity: 0.4;
+            border-style: dashed;
+            background-color: var(--bg-tertiary);
+        }
+
+        .remove-btn {
+            flex-shrink: 0;
+            background: var(--accent-danger);
+            color: #444444; /* Readable ink color for rusty rose background */
+            border: none;
+            border-radius: 6px;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.25rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .remove-btn:hover {
+            background: var(--accent-danger-hover);
+        }
+
+        .add-btn {
+            background: var(--accent-color);
+            color: var(--bg-primary);
+            border: none;
+            height: 44px;
+            padding: 0 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+            margin-bottom: 0.5rem;
+        }
+
+        .add-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .generate-container {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        #generate-button {
+            background-color: var(--accent-success);
+            color: var(--bg-primary);
+            height: 48px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+
+        #generate-button:hover {
+            background-color: var(--accent-success-hover);
+        }
+
+        #generate-button:disabled {
+            background-color: var(--border-color);
+            color: var(--text-main);
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #download-container {
+            margin-top: 1.25rem;
+        }
+
+        #download-container h4 {
+            margin-top: 0;
+            border-bottom: none;
+            padding-bottom: 0;
+            font-family: var(--font-serif);
+        }
+
+        #download-container a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 44px;
+            background-color: var(--accent-color);
+            color: var(--bg-primary);
+            text-decoration: none;
+            border-radius: 6px;
+            padding: 0 20px;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+            transition: background-color 0.2s;
+        }
+
+        #download-container a:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .info {
+            font-size: 0.9rem;
+            color: var(--text-main);
+            opacity: 0.75;
+            line-height: 1.4;
+            margin-top: 0.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        /* Truly Simple Tools Ecosystem Footer */
+        .tst-footer {
+            margin-top: 3rem;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-main);
+        }
+
+        .tst-footer hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-version {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-bottom: 0.25rem;
+        }
+
+        .footer-tagline {
+            font-weight: 600;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-maker {
+            opacity: 0.75;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-links a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
 
     <div class="controls" id="controls-panel">
-        <h2>RSS Page Maker</h2>
-        <p class="info">Customize your site below (the preview on the right updates instantly).</p>
-        <p class="info">When done, click `Generate Website,` download and upzip the file, and upload the files in the `upload_these_files` folder to your web host.</p>
+        <header class="panel-header">
+            <h2>RSS Page Maker</h2>
+        </header>
+        <p class="info">Add your RSS feeds, customize your header details, navigation links, and theme, then generate your custom website code instantly.</p>
 
-        <h3>Header</h3>
-        <div class="form-group"><label for="site-title">Page Title (Browser Tab)</label><input type="text" id="site-title" value="My Work"></div>
-        <div class="form-group"><label for="header-title">Header Title</label><input type="text" id="header-title" value="My Work"></div>
-        <div class="form-group"><label for="header-subtitle">Subtitle</label><input type="text" id="header-subtitle" value="A collection of my recent articles and podcast episodes."></div>
+        <div>
+            <h3>RSS Feeds</h3>
+            <div id="rss-feed-container"></div>
+            <button id="add-rss-feed" class="add-btn">+ Add RSS Feed</button>
+        </div>
 
-        <h3>Appearance</h3>
-        <div class="form-group"><label for="color-scheme">Color Scheme</label><select id="color-scheme"><option value="system">System (Default)</option><option value="midnight">Midnight</option><option value="sepia">Sepia</option><option value="slate">Slate</option><option value="latte">Latte</option><option value="monochrome">Monochrome</option></select></div>
-        <div class="form-group"><label for="font-scheme">Font Scheme</label><select id="font-scheme"><option value="system">System (Default)</option><option value="serif">Serif</option><option value="mono">Mono</option></select></div>
+        <div>
+            <h3>Header Details</h3>
+            <div class="form-group">
+                <label for="site-title">Page Title (Browser Tab)</label>
+                <input type="text" id="site-title" value="My Work">
+            </div>
+            <div class="form-group">
+                <label for="header-title">Header Title</label>
+                <input type="text" id="header-title" value="My Work">
+            </div>
+            <div class="form-group">
+                <label for="header-subtitle">Subtitle</label>
+                <input type="text" id="header-subtitle" value="A collection of my recent articles and podcast episodes.">
+            </div>
+        </div>
 
-        <h3>Navigation Links</h3>
-        <div id="nav-link-container"></div>
-        <button id="add-nav-link" class="add-btn">Add Link</button>
+        <div>
+            <h3>Appearance</h3>
+            <div class="form-group">
+                <label for="color-scheme">Color Scheme</label>
+                <select id="color-scheme">
+                    <option value="paper">Cream Paper (Default)</option>
+                    <option value="charcoal">Charcoal</option>
+                    <option value="sepia">Sepia</option>
+                    <option value="slate">Slate</option>
+                    <option value="monochrome">Monochrome</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="font-scheme">Font Scheme</label>
+                <select id="font-scheme">
+                    <option value="system">System (Default)</option>
+                    <option value="serif">Serif</option>
+                    <option value="mono">Mono</option>
+                </select>
+            </div>
+        </div>
 
-        <h3>RSS Feeds</h3>
-        <div id="rss-feed-container"></div>
-        <button id="add-rss-feed" class="add-btn">Add RSS Feed</button>
+        <div>
+            <h3>Navigation Links</h3>
+            <div id="nav-link-container"></div>
+            <button id="add-nav-link" class="add-btn">+ Add Link</button>
+        </div>
 
         <div class="generate-container">
             <button id="generate-button">Generate Website</button>
             <div id="download-container"></div>
         </div>
+
+        <!-- Ecosystem Footer -->
+        <footer class="tst-footer">
+            <hr>
+            <div class="footer-version">Version 1.0.0 (Build 1)</div>
+            <div class="footer-tagline">Truly Simple Tools: Good basic apps.</div>
+            <div class="footer-maker">RSS Page Maker is designed and built by one person (my name is Colin), and I'd love to hear from you.</div>
+            <div class="footer-links">
+                <a href="https://trulysimpletools.com/" target="_blank" rel="noopener noreferrer">TST Apps</a>
+                <a href="https://trulysimpletools.com/about" target="_blank" rel="noopener noreferrer">About TST</a>
+                <a href="https://trulysimpletools.com/contact" target="_blank" rel="noopener noreferrer">Contact Colin</a>
+            </div>
+        </footer>
     </div>
 
     <div class="preview"><iframe id="preview-frame"></iframe></div>
@@ -62,28 +400,106 @@
     <script>
         const templateStyleCss = `
 :root {
-    --background-color: #ffffff;
-    --text-color: #222222;
-    --secondary-text-color: #555555;
-    --accent-color: #007aff;
-    --border-color: #e0e0e0;
+    --background-color: #FFFFFC;
+    --text-color: #444444;
+    --secondary-text-color: #647F98;
+    --accent-color: #79915C;
+    --border-color: #E2E1DF;
     --body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --content-width: 700px;
     --base-font-size: 17px;
     --base-line-height: 1.6;
 }
-html[data-theme='midnight'] { --background-color: #1a1a1a; --text-color: #e5e5e5; --secondary-text-color: #999999; --accent-color: #4da6ff; --border-color: #333333; }
-html[data-theme='sepia'] { --background-color: #f4f0e8; --text-color: #4a4033; --secondary-text-color: #7a6a58; --accent-color: #b35900; --border-color: #dcd3c3; }
-html[data-theme='slate'] { --background-color: #2e3440; --text-color: #eceff4; --secondary-text-color: #d8dee9; --accent-color: #88c0d0; --border-color: #4c566a; }
-html[data-theme='latte'] { --background-color: #fdf6e3; --text-color: #657b83; --secondary-text-color: #93a1a1; --accent-color: #cb4b16; --border-color: #eee8d5; }
-html[data-theme='monochrome'] { --background-color: #ffffff; --text-color: #000000; --secondary-text-color: #555555; --accent-color: #000000; --border-color: #bbbbbb; }
-html[data-font='serif'] { --body-font: Iowan Old Style, Georgia, Times, "Times New Roman", serif; }
-html[data-font='mono'] { --body-font: "SF Mono", Menlo, Consolas, "Courier New", monospace; }
-body { font-family: var(--body-font); background-color: var(--background-color); color: var(--text-color); margin: 0; padding: 2rem 1rem; font-size: var(--base-font-size); line-height: var(--base-line-height); transition: background-color 0.3s, color 0.3s; }
-.site-header { max-width: var(--content-width); margin: 0 auto; padding-bottom: 2rem; border-bottom: 1px solid var(--border-color); margin-bottom: 2rem; position: relative; }
+html[data-theme='paper'] {
+    --background-color: #FFFFFC;
+    --text-color: #444444;
+    --secondary-text-color: #647F98;
+    --accent-color: #79915C;
+    --border-color: #E2E1DF;
+}
+html[data-theme='charcoal'] {
+    --background-color: #232322;
+    --text-color: #F8F7F6;
+    --secondary-text-color: #B6C9DB;
+    --accent-color: #DCC48E;
+    --border-color: #3A3A37;
+}
+html[data-theme='sepia'] {
+    --background-color: #F4F0E8;
+    --text-color: #4A4033;
+    --secondary-text-color: #7A6A58;
+    --accent-color: #B35900;
+    --border-color: #DCD3C3;
+}
+html[data-theme='slate'] {
+    --background-color: #2E3440;
+    --text-color: #ECEFF4;
+    --secondary-text-color: #D8DEE9;
+    --accent-color: #88C0D0;
+    --border-color: #4C566A;
+}
+html[data-theme='monochrome'] {
+    --background-color: #FFFFFC;
+    --text-color: #222222;
+    --secondary-text-color: #555555;
+    --accent-color: #444444;
+    --border-color: #DDDDDD;
+}
+html[data-font='serif'] { --body-font: Georgia, Merriweather, "Source Serif Pro", serif; }
+html[data-font='mono'] { --body-font: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, "Liberation Mono", monospace; }
+
+body { 
+    font-family: var(--body-font); 
+    background-color: var(--background-color); 
+    color: var(--text-color); 
+    margin: 0; 
+    padding: 2rem 1rem; 
+    font-size: var(--base-font-size); 
+    line-height: var(--base-line-height); 
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s; 
+}
+.site-header { 
+    max-width: var(--content-width); 
+    margin: 0 auto; 
+    padding-bottom: 2rem; 
+    border-bottom: 1px solid var(--border-color); 
+    margin-bottom: 2rem; 
+    position: relative; 
+}
+.header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+h1 { font-size: 2.5rem; margin: 0; font-weight: normal; line-height: 1.2; }
+.site-header p { font-size: 1.2rem; color: var(--secondary-text-color); margin-top: 0.5rem; margin-bottom: 1rem; }
+
+/* Theme Toggle Button */
+.theme-toggle {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+    transition: background-color 0.2s, color 0.2s;
+    padding: 0;
+    margin: 0;
+}
+.theme-toggle:hover {
+    background-color: var(--border-color);
+}
+.theme-toggle svg {
+    width: 24px;
+    height: 24px;
+}
+
 #feed-container { max-width: var(--content-width); margin: 0 auto; }
-h1 { font-size: 2.5rem; margin: 0 0 0.5rem 0; }
-.site-header p { font-size: 1.2rem; color: var(--secondary-text-color); margin-top: 0; margin-bottom: 1rem; }
 .site-nav { display: flex; justify-content: flex-start; align-items: center; }
 .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 0; color: var(--text-color); z-index: 1001; }
 .nav-links { list-style: none; margin: 0; padding: 0; display: flex; gap: 1.5rem; }
@@ -95,16 +511,16 @@ h1 { font-size: 2.5rem; margin: 0 0 0.5rem 0; }
     .nav-links { display: none; position: absolute; top: 60px; right: 0; flex-direction: column; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); gap: 1rem; z-index: 1000; min-width: 180px; }
     .nav-links.active { display: flex; }
 }
-.feed-item { padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); }
+.feed-item { padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); transition: border-color 0.3s; }
 .feed-item:last-child { border-bottom: none; margin-bottom: 0; }
 .item-meta { font-size: 0.9rem; color: var(--secondary-text-color); font-weight: 500; margin-bottom: 0.25rem; display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; }
 .item-meta .separator { color: var(--border-color); }
-.item-title { font-size: 1.5rem; margin: 0 0 0.5rem 0; font-weight: 600; }
+.item-title { font-size: 1.5rem; margin: 0 0 0.5rem 0; font-weight: normal; }
 .item-title a { color: var(--text-color); text-decoration: none; }
 .item-title a:hover { color: var(--accent-color); text-decoration: underline; }
 .item-summary { margin: 0.5rem 0 1rem 0; }
 .item-actions { display: flex; gap: 0.75rem; margin: 1rem 0; }
-.action-button { background-color: transparent; border: 1px solid var(--border-color); color: var(--secondary-text-color); padding: 0.4rem 0.8rem; font-size: 0.85rem; font-weight: 500; border-radius: 20px; text-decoration: none; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+.action-button { background-color: transparent; border: 1px solid var(--border-color); color: var(--secondary-text-color); padding: 0.4rem 0.8rem; font-size: 0.85rem; font-weight: 500; border-radius: 20px; text-decoration: none; cursor: pointer; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
 .action-button:hover { background-color: var(--border-color); color: var(--text-color); }
 .item-audio { width: 100%; margin-top: 1rem; }
 a { color: var(--accent-color); }
@@ -118,14 +534,79 @@ const feedContainer = document.getElementById('feed-container');
 const apiEndpoint = 'https://api.rss2json.com/v1/api.json?rss_url=';
 const CACHE_KEY = 'feed_data';
 const CACHE_DURATION_MS = 60 * 60 * 1000;
+const themeToggleButton = document.getElementById('theme-toggle-button');
+const darkThemes = ['charcoal', 'slate'];
 
 function getSources() {
     return window.feedSources || (typeof feedSources !== 'undefined' ? feedSources : []);
 }
+
+function getBaseTheme() {
+    return window.colorScheme || (typeof colorScheme !== 'undefined' ? colorScheme : 'paper');
+}
+
+function getDarkPartner(theme) {
+    if (theme === 'sepia') return 'slate';
+    return 'charcoal';
+}
+
+function getLightPartner(theme) {
+    if (theme === 'slate') return 'sepia';
+    if (theme === 'charcoal') return 'paper';
+    return theme;
+}
+
 function applyCustomizations() {
     if (typeof colorScheme !== 'undefined' && colorScheme !== 'system') document.documentElement.setAttribute('data-theme', colorScheme);
     if (typeof fontScheme !== 'undefined' && fontScheme !== 'system') document.documentElement.setAttribute('data-font', fontScheme);
 }
+
+function initTheme() {
+    const baseTheme = getBaseTheme();
+    const isBaseDark = darkThemes.includes(baseTheme);
+    const savedPref = localStorage.getItem('site-theme-preference');
+    
+    let activeTheme = baseTheme;
+    if (savedPref === 'dark' && !isBaseDark) {
+        activeTheme = getDarkPartner(baseTheme);
+    } else if (savedPref === 'light' && isBaseDark) {
+        activeTheme = getLightPartner(baseTheme);
+    }
+    
+    document.documentElement.setAttribute('data-theme', activeTheme);
+    renderThemeToggleIcon(activeTheme);
+}
+
+function renderThemeToggleIcon(currentTheme) {
+    if (!themeToggleButton) return;
+    const isDark = darkThemes.includes(currentTheme);
+    if (isDark) {
+        themeToggleButton.innerHTML = \`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>\`;
+        themeToggleButton.setAttribute('aria-label', 'Switch to light theme');
+    } else {
+        themeToggleButton.innerHTML = \`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>\`;
+        themeToggleButton.setAttribute('aria-label', 'Switch to dark theme');
+    }
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || getBaseTheme();
+    const isCurrentDark = darkThemes.includes(currentTheme);
+    const baseTheme = getBaseTheme();
+    
+    let newTheme;
+    if (isCurrentDark) {
+        newTheme = darkThemes.includes(baseTheme) ? getLightPartner(baseTheme) : baseTheme;
+        localStorage.setItem('site-theme-preference', 'light');
+    } else {
+        newTheme = darkThemes.includes(baseTheme) ? baseTheme : getDarkPartner(baseTheme);
+        localStorage.setItem('site-theme-preference', 'dark');
+    }
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    renderThemeToggleIcon(newTheme);
+}
+
 function setupNavigation() {
     const nav = document.querySelector('.site-nav');
     const toggleButton = document.getElementById('nav-toggle-button');
@@ -149,19 +630,56 @@ function renderItems(items) {
 function createFeedItemElement(item) {
     const itemDiv = document.createElement('div');
     itemDiv.className = 'feed-item';
+    
     const metaDiv = document.createElement('div');
     metaDiv.className = 'item-meta';
-    metaDiv.innerHTML = \`<span>\${item.sourceName}</span><span class="separator">•</span><span>\${new Date(item.pubDate).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}</span>\`;
+    
+    const sourceSpan = document.createElement('span');
+    sourceSpan.textContent = item.sourceName;
+    
+    const separatorSpan = document.createElement('span');
+    separatorSpan.className = 'separator';
+    separatorSpan.textContent = ' • ';
+    
+    const dateSpan = document.createElement('span');
+    dateSpan.textContent = new Date(item.pubDate).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    
+    metaDiv.appendChild(sourceSpan);
+    metaDiv.appendChild(separatorSpan);
+    metaDiv.appendChild(dateSpan);
+    
     const titleH2 = document.createElement('h2');
     titleH2.className = 'item-title';
-    titleH2.innerHTML = \`<a href="\${item.link}" target="_blank" rel="noopener noreferrer">\${item.title}</a>\`;
+    const titleLink = document.createElement('a');
+    titleLink.href = item.link;
+    titleLink.target = '_blank';
+    titleLink.rel = 'noopener noreferrer';
+    titleLink.textContent = item.title || 'Untitled';
+    titleH2.appendChild(titleLink);
+    
     const summaryP = document.createElement('p');
     summaryP.className = 'item-summary';
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = item.description;
-    summaryP.textContent = tempDiv.textContent.split(' ').slice(0, 50).join(' ') + '…';
+    
+    let plainText = '';
+    if (item.description) {
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(item.description, 'text/html');
+            plainText = doc.body.textContent || '';
+        } catch (e) {
+            console.error('Failed to parse description:', e);
+            plainText = '';
+        }
+    }
+    summaryP.textContent = plainText.split(/\\s+/).slice(0, 50).join(' ') + (plainText ? '…' : '');
+    
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'item-actions';
+    
     const readButton = document.createElement('a');
     readButton.href = item.link;
     readButton.target = '_blank';
@@ -169,6 +687,7 @@ function createFeedItemElement(item) {
     readButton.className = 'action-button';
     readButton.textContent = 'Read';
     actionsDiv.appendChild(readButton);
+    
     const copyButton = document.createElement('button');
     copyButton.className = 'action-button';
     copyButton.textContent = 'Copy Link';
@@ -179,6 +698,7 @@ function createFeedItemElement(item) {
         });
     });
     actionsDiv.appendChild(copyButton);
+    
     if (navigator.share) {
         const shareButton = document.createElement('button');
         shareButton.className = 'action-button';
@@ -188,11 +708,13 @@ function createFeedItemElement(item) {
         });
         actionsDiv.appendChild(shareButton);
     }
+    
     itemDiv.appendChild(metaDiv);
     itemDiv.appendChild(titleH2);
     itemDiv.appendChild(summaryP);
     itemDiv.appendChild(actionsDiv);
-    if (item.enclosure?.link && item.enclosure.type.startsWith('audio/')) {
+    
+    if (item.enclosure?.link && item.enclosure.type && item.enclosure.type.startsWith('audio/')) {
         const audioPlayer = document.createElement('audio');
         audioPlayer.className = 'item-audio';
         audioPlayer.controls = true;
@@ -235,11 +757,20 @@ function getCachedData() {
 }
 function main() {
     applyCustomizations();
+    initTheme();
     setupNavigation();
     const cachedItems = getCachedData();
     if (cachedItems) renderItems(cachedItems);
     fetchFreshData();
 }
+
+window.initTheme = initTheme;
+window.toggleTheme = toggleTheme;
+
+if (themeToggleButton) {
+    themeToggleButton.addEventListener('click', toggleTheme);
+}
+
 main();`;
 
         const controlsPanel = document.getElementById('controls-panel');
@@ -257,14 +788,16 @@ main();`;
         const createNavItem = (text = '', url = '') => {
             const div = document.createElement('div');
             div.className = 'dynamic-item';
-            div.innerHTML = `<div><label>Link Text</label><input type="text" class="nav-text" value="${escapeHTML(text)}"></div><div><label>Link URL</label><input type="text" class="nav-url" value="${escapeHTML(url)}" placeholder="https://example.com"></div><button class="remove-btn" title="Remove Link">×</button>`;
+            div.setAttribute('draggable', 'false');
+            div.innerHTML = `<div class="drag-handle" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</div><div><label>Link Text</label><input type="text" class="nav-text" value="${escapeHTML(text)}"></div><div><label>Link URL</label><input type="text" class="nav-url" value="${escapeHTML(url)}" placeholder="https://example.com"></div><button class="remove-btn" title="Remove Link" aria-label="Remove Link">×</button>`;
             navLinkContainer.appendChild(div);
         }
 
         const createRssItem = (name = '', url = '') => {
             const div = document.createElement('div');
             div.className = 'dynamic-item';
-            div.innerHTML = `<div><label>Feed Name</label><input type="text" class="rss-name" value="${escapeHTML(name)}"></div><div><label>Feed URL</label><input type="text" class="rss-url" value="${escapeHTML(url)}" placeholder="https://example.com/feed.xml"></div><button class="remove-btn" title="Remove Feed">×</button>`;
+            div.setAttribute('draggable', 'false');
+            div.innerHTML = `<div class="drag-handle" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</div><div><label>Feed Name</label><input type="text" class="rss-name" value="${escapeHTML(name)}"></div><div><label>Feed URL</label><input type="text" class="rss-url" value="${escapeHTML(url)}" placeholder="https://example.com/feed.xml"></div><button class="remove-btn" title="Remove Feed" aria-label="Remove Feed">×</button>`;
             rssFeedContainer.appendChild(div);
         }
 
@@ -289,9 +822,22 @@ main();`;
                 previewDoc.title = document.getElementById('site-title').value;
                 previewDoc.querySelector('.site-header h1').textContent = document.getElementById('header-title').value;
                 previewDoc.querySelector('.site-header p').textContent = document.getElementById('header-subtitle').value;
-                previewDoc.documentElement.setAttribute('data-theme', document.getElementById('color-scheme').value);
+                
+                const selectedTheme = document.getElementById('color-scheme').value;
+                previewWindow.colorScheme = selectedTheme;
+                previewWindow.fontScheme = document.getElementById('font-scheme').value;
+                
+                previewDoc.documentElement.setAttribute('data-theme', selectedTheme);
                 previewDoc.documentElement.setAttribute('data-font', document.getElementById('font-scheme').value);
                 
+                try {
+                    previewWindow.localStorage.removeItem('site-theme-preference');
+                } catch(e) {}
+                
+                if (typeof previewWindow.initTheme === 'function') {
+                    previewWindow.initTheme();
+                }
+
                 const navLinksHTML = getNavLinksData().map(link => {
                     const target = link.url.startsWith('http') ? 'target="_blank"' : '';
                     return `<li><a href="${escapeHTML(link.url)}" ${target}>${escapeHTML(link.text)}</a></li>`;
@@ -335,12 +881,65 @@ main();`;
             }
         }
 
+        const setupDragAndDrop = (container, updateType) => {
+            let dragEl = null;
+
+            // Enable dragging when mouse is down on handle
+            container.addEventListener('mousedown', e => {
+                const handle = e.target.closest('.drag-handle');
+                if (handle) {
+                    const item = handle.closest('.dynamic-item');
+                    if (item) {
+                        item.setAttribute('draggable', 'true');
+                    }
+                }
+            });
+
+            // Disable dragging on mouseup to prevent click/drag issues
+            container.addEventListener('mouseup', e => {
+                const item = e.target.closest('.dynamic-item');
+                if (item) {
+                    item.setAttribute('draggable', 'false');
+                }
+            });
+
+            container.addEventListener('dragstart', e => {
+                const item = e.target.closest('.dynamic-item');
+                if (!item || item.getAttribute('draggable') !== 'true') {
+                    e.preventDefault();
+                    return;
+                }
+                dragEl = item;
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            container.addEventListener('dragover', e => {
+                e.preventDefault();
+                const item = e.target.closest('.dynamic-item');
+                if (!item || item === dragEl) return;
+                
+                const rect = item.getBoundingClientRect();
+                const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+                container.insertBefore(dragEl, next ? item.nextSibling : item);
+            });
+
+            container.addEventListener('dragend', e => {
+                if (dragEl) {
+                    dragEl.classList.remove('dragging');
+                    dragEl.setAttribute('draggable', 'false');
+                }
+                dragEl = null;
+                updatePreview(updateType);
+            });
+        }
+
         const setupInitialState = () => {
-            document.getElementById('color-scheme').value = 'system';
+            document.getElementById('color-scheme').value = 'paper';
             document.getElementById('font-scheme').value = 'system';
             navLinkContainer.innerHTML = '';
             rssFeedContainer.innerHTML = '';
-            [{ text: 'GitHub', url: 'https://github.com' }, { text: 'Twitter', url: 'https://twitter.com' }].forEach(link => createNavItem(link.text, link.url));
+            [{ text: 'GitHub', url: 'https://github.com' }, { text: 'Instagram', url: 'https://instagram.com' }].forEach(link => createNavItem(link.text, link.url));
             [{ name: 'Daring Fireball', url: 'https://daringfireball.net/feeds/main' }].forEach(feed => createRssItem(feed.name, feed.url));
         }
 
@@ -358,19 +957,26 @@ main();`;
         ['input', 'change'].forEach(evt => controlsPanel.addEventListener(evt, handleControlChange));
         
         previewFrame.addEventListener('load', () => setTimeout(() => updatePreview('all'), 100));
-        
+
         document.addEventListener('DOMContentLoaded', () => {
             setupInitialState();
+            setupDragAndDrop(navLinkContainer, 'style');
+            setupDragAndDrop(rssFeedContainer, 'data');
+            
             const initialPreviewHtml = `<!DOCTYPE html>
                 <html lang="en">
                 <head>
                     <title></title>
                     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <style>${templateStyleCss}</style>
+                    <style>${templateStyleCss.replace(/<\/style>/g, '<\\/style>')}</style>
                 </head>
                 <body>
                     <header class="site-header">
-                        <h1></h1><p></p>
+                        <div class="header-main">
+                            <h1></h1>
+                            <button id="theme-toggle-button" class="theme-toggle" aria-label="Toggle Dark Mode"></button>
+                        </div>
+                        <p></p>
                         <nav class="site-nav">
                             <button class="nav-toggle" id="nav-toggle-button" aria-label="Toggle Navigation">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 4H21V6H3V4ZM3 11H21V13H3V11ZM3 18H21V20H3V18Z"></path></svg>
@@ -420,7 +1026,10 @@ main();`;
 </head>
 <body>
     <header class="site-header">
-        <h1>${escapeHTML(document.getElementById('header-title').value)}</h1>
+        <div class="header-main">
+            <h1>${escapeHTML(document.getElementById('header-title').value)}</h1>
+            <button id="theme-toggle-button" class="theme-toggle" aria-label="Toggle Dark Mode"></button>
+        </div>
         <p>${escapeHTML(document.getElementById('header-subtitle').value)}</p>
         <nav class="site-nav" ${!navLinksHTML.trim() ? 'style="display: none;"' : ''}>
             <button class="nav-toggle" id="nav-toggle-button" aria-label="Toggle Navigation">
@@ -447,7 +1056,7 @@ ${navLinksHTML.trim()}
                 const zipBlob = await zip.generateAsync({ type: "blob" });
                 const downloadUrl = URL.createObjectURL(zipBlob);
                 
-                downloadContainer.innerHTML = `<h4>Your website is ready.</h4><a href="${downloadUrl}" download="upload_these_files.zip">Download upload_these_files.zip</a><p class="info">Unzip this file and upload the files in the \`upload_these_files\` folder to your web host.</p>`;
+                downloadContainer.innerHTML = `<h4>Your website is ready.</h4><a href="${downloadUrl}" download="upload_these_files.zip">Download ZIP</a><p class="info">Unzip this file and upload the files in the \`upload_these_files\` folder to your web host.</p>`;
             } catch (error) {
                 console.error("Failed to generate zip file:", error);
                 downloadContainer.innerHTML = `<p class="info" style="color: #dc3545;">An error occurred during generation. See console for details.</p>`;
